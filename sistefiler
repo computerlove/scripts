@@ -1,5 +1,18 @@
 #!/bin/bash
-for i in `find ./ -type f -mtime -7 ! -mtime -0 -exec ls {} \;`
+ORIGINAL_IFS=$IFS
+IFS=$'\n'
+
+rm -rf /media/raid/sisteepisoder/*
+echo \#EXT3M3U >> /media/raid/sisteepisoder/sisteepisoder.m3u;
+
+for i in `find /media/raid/Serier -type f -mtime -14 ! -mtime -0 -exec ls {} \;`
 do
-   echo $i;
+   REVERSED=`echo $i | rev`;
+   INDEXREV=`expr index "$REVERSED" /`;
+   INDEX=`expr ${#i} - $INDEXREV`;
+   ln -s $i /media/raid/sisteepisoder${i:(-$INDEXREV)};
+   echo \#EXTINF:0,${i:(-$INDEXREV)} >> /media/raid/sisteepisoder/sisteepisoder.m3u;
+   echo /media/raid/sisteepisoder${i:(-$INDEXREV)} >> /media/raid/sisteepisoder/sisteepisoder.m3u;
 done
+
+IFS=$ORIGINAL_IFS
