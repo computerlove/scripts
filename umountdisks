@@ -1,0 +1,3 @@
+gksu umount /media/raid
+gksu umount /media/disk2
+gksu umount /media/disk3

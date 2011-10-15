@@ -1,0 +1,5 @@
+#!/bin/bash
+for i in `find ./ -type f -mtime -7 ! -mtime -0 -exec ls {} \;`
+do
+   echo $i;
+done

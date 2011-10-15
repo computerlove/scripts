@@ -1,0 +1,4 @@
+sensors
+echo "GPU:"
+nvidia-smi -a | grep 'Gpu' | sed 's/[+|Â°|C]//g' | awk {'print $3'}
+
