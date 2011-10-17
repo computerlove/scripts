@@ -3,13 +3,17 @@
 # This script will find .rar files recursively and extract the files in their directories.
 # After the succesful unrar the function 'findremove()' will delete all .rar files.
 
-
 if [ -z $1 ] ; then
   echo "usage: auto_extract.sh /full/path/to/directory &> /dev/null &"
   exit
 fi
 
 parent=$1
+path=""
+
+if [! -z $2 ] ; then
+  path=$2
+fi
 
 email="youremail@domain.com"
 
@@ -21,7 +25,6 @@ findremove() {
 find $parent -iname '*.rar' | while read file
 do
         d=$(dirname "$file")
-
         f=$(basename "$file")
         # only unrar part01.rar and rars
 
@@ -34,7 +37,7 @@ do
 
         echo "Extracting $f"
 
-        if unrar x -o+ "$f"; then
+        if unrar x -o+ "$f" "$path"; then
            findremove
            else
                 mail -s "unRAR ERROR" $email <<< "Extract failed within directory: $d"
