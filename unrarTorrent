@@ -1,262 +1,43 @@
-#!/bin/sh
- #------------------------------------------------------------------------------
- # NAME:
- #     unrar.sh
- # DESCRIPTION:
- #     will unrar finished torrents collected from transmission used on
- #     popcornhour
- # COMMENTS:
- #     code updated and built on current unrar.sh included with latest NMT apps
- #     tested on Linux PCH-A110 2.6.15-sigma firmware version: 
- #     01-17-080613-15-POP-403-000    
- # HISTORY:
- #     updated 10/07/2008 by AAA (NMT forum member: nickel) - initial creation
- #     updated 10/08/2008 by AAA (NMT forum member: nickel) - fixed return code
- #           bug that would not properly capture error codes on unrar execution
- #     updated 10/12/2008 by AAA (NMT forum member: nickel) - added log function,
- #           new global variables, removed abandon_script and added end_script
- #           and many new loops in init main, which will handle rar versions 2 
- #           and 3
- #------------------------------------------------------------------------------
- # log function to easily change from stdout to tmpfile
- log() {
-     # added time infomation for later calculations or future script expansion
-     echo -e "[`date | awk '{print $4}'`] $@" >>$TMPFILE
- }
- # setup logfile for script output ($$ is PID of script)
- TMPFILE=/tmp/unrar.sh.$$
+#!/bin/bash
 
- log "[INFO] Script starting.." 
+# This script will find .rar files recursively and extract the files in their directories.
+# After the succesful unrar the function 'findremove()' will delete all .rar files.
 
- # setup unrar and pidof exectuable location variables
- UNRAR_EXE=/mnt/syb8634/bin/unrar
- PIDOF_EXE=/bin/pidof
 
- # global variable to delete logfile if the run was succesful
- # false keeps logfile, true removes logfile on safe exit
- CLEANUP_LOGFILE=false
+if [ -z $1 ] ; then
+  echo "usage: auto_extract.sh /full/path/to/directory &> /dev/null &"
+  exit
+fi
 
- # function to move log file to torrent directory and
- # end script
- end_script() {
-     
-     log "[INFO] Script ending..."
-     
-     # moves log file to torrent directory and exits, however if we encounter an error trying to get inside the
-     # the torrent directory, the logfile will move to the root of the .transmission folder for later review
-     mv $TMPFILE . 
-     
-     # parameter 1 is the exit code that enters this compound-command function, lets use it, if defined
-     if [[ -z $1 ]] # if we have no exit code then its a safe bet we cleared all errors!
-     then
-         # if we made it here then we were pretty darn lucky things worked
-         # perform cleanup of file 
-         if [[ $CLEANUP_LOGFILE == "true" ]]
-         then
-             log "[INFO] removing file.."
-             rm -rf $TMPFILE # remove temp log file
-         fi
-         exit 0 # a safe exit
-     else
-         exit $1 # now just stop! We need to understand why the process failed
-     fi
- }
+parent=$1
 
- # function to check if unrar is running already
- # if running returns true otherwise false
- is_unrar_running() {
-     # check to make sure unrar is NOT running this allows the NMT to stay cool
-     # by not processing many torrents with its limited block buffer, memory, 
-     # and CPU horsepower --we dont want to kill our entertainment toy!
-     UNRAR_PID=$($PIDOF_EXE unrar)
-     if [[ -z $UNRAR_PID ]] # if the process is not present, then pidof returns null
-     then
-         log "[INFO] unrar NOT running, yay!"
-         return 1 # false not running
-     else
-         log "[WARNING] unrar is already running with PID $UNRAR_PID"
-         return 0 # true is running
-     fi
- }
+email="youremail@domain.com"
 
- # function to unrar the file that was found from the completed torrent
- # if unpacks succeeds returns true otherwise false
- unpack_file() {
-     # check to make sure we can get a handle on the incoming rar file
-     if [[ -f $1 ]] && [[ -r $1 ]]
-     then
-         log "[INFO] file $1 available for reading and extracting"
-     else
-         log "[ERROR] couldnt get a lock on rar file $1 for extracing"
-         end_script 1 # exit with error
-     fi
-     
-     # check to see if unrar is present and executable by the caller of the script
-     if [[ -f $UNRAR_EXE ]] && [[ -x $UNRAR_EXE ]]
-     then
-         # unrar is present and exectuable
-         log "[INFO] $UNRAR_EXE application found and verified executable"
-     else
-         log "[ERROR] $UNRAR_EXE application either not found or not executable"
-         end_script 1 # exit with error
-     fi
+findremove() {
+	 echo "Wanted to remove"
+#        find $(pwd) -regextype posix-egrep -iregex '^.*\.r([0-9]+|ar)$' -exec echo "Wanted to remove:" {} \;
+}
 
-     # check to see if pidof is present and executable by the caller of the script    
-     if [[ -f $PIDOF_EXE  ]] && [[ -x $PIDOF_EXE ]]
-     then
-         # pidof is present and exectuable
-         log "[INFO] $PIDOF_EXE application found and verified executable"
-     else
-         log "[ERROR] $PIDOF_EXE application either not found or not executable"
-         end_script 1 # exit with error
-     fi
-     
-     # check to make sure UNRAR is NOT running by calling a function to trap the return code
-     while true 
-     do # do while loop here until pid is destroyed
-         if (( is_unrar_running == 0 )) 
-         then #if unrar is already running
-             log "[WARNING] unrar is already running sleeping 15 seconds..."
-             sleep 15 # 15 seconds, is this enough time? .. probably so
-         else
-             log "[INFO] unrar is NOT running, lets hurry to unrar file"
-             break
-         fi
-         # go around the loop again until we get really dizzy
-     done
-     
-     # if we made it here its time to start the unrar process using some legacy code already present
-     # however we change the extraction directory to the name of the archive this is safer just in 
-     # case we hit multiple rar files with similar inside packings
-     $UNRAR_EXE x -y -p- -o+ "$1" ${ARCHIVE_FILE%\.rar}/ >> $TMPFILE 2>&1
-     if [[ "${?}" -ne "0" ]] # check return code to ensure the app didnt fail us
-     then # return code exited something other than zero, why?
-         log "[ERROR] $UNRAR_EXE application failed with $? errorcode"
-         return 1
-     else
-         log "[INFO] $UNRAR_EXE application succeeded"
-         return 0 # return true
-     fi
- }
+find $parent -iname '*.rar' | while read file
+do
+        d=$(dirname "$file")
 
- # sanity check to ensure the script is passed at least 1 argurment to begin processing
- if [[ $# -lt 1 ]] # parameters needs to be greater than 1
- then
-     # exit script with error since parameters did not equal greater than 1
-     log "[ERROR] Try passing the directory name where the rar file is!"
-     end_script 1 # exit with error
- else
-     # we only care about the 1st parameter where the torrent data resides
-     # Param2 is left here for historical reasons and maybe future expansion
-     
-     # Recall that...
-     # Param $1 -> Path to file
-     # Param $2 -> Filename of first file in torrent
-     
-     # lets do a sanity check on the Param1 to ensure 
-     # its a directory, is readable and is writeable by the caller of the script
-     if [[ -d $1 ]] && [[ -r $1 ]] && [[ -w $1 ]]
-     then
-         log "[INFO] $1 passed all sanity tests"
-         # param1 passes all sanity checks lets set the variable and continue
-         PATH_TO_FILE="$1" # quote it up to preserve spaces, etc
-     else
-         # param1 failed 1 or more sanity tests show error and exit
-         log "[ERROR] $1 failed 1 or more sanity tests"
-         end_script 1 # exit with error
-     fi
- fi
+        f=$(basename "$file")
+        # only unrar part01.rar and rars
 
- # change directories into the PATH_TO_FILE location
- cd "$PATH_TO_FILE"
+        if echo $f | grep -q 'part[0-9]*.rar$'; then
+            if ! echo $f | grep -q 'part01.rar$'; then
+                continue
+            fi
+        fi
+        cd "$d"
 
- # get the file count for all .rar file extensions in the given directory PATH_TO_FILE
- # if no rar files are found surpress the No such file or directory error to the bit bucket
- # store in a count variable
- RAR_COUNT=$(ls *.rar 2>/dev/null | awk 'END{print NR}')
- log "[INFO] found $RAR_COUNT rar files."
+        echo "Extracting $f"
 
- # case select for the various counts that can come from the total rar count command above
- # start searching for the rar files,  for each rar file found populate
- # the ARCHIVE_FILE variable and begin the unrar process on that file
- # ** sorry zips are not supported at this time **
- case $RAR_COUNT in
-     0)
-         log "[INFO] No rar files detected, aborting!"
-         end_script
-         ;;
-     1)
-         # prior to RAR version 3.0, segments of RAR file sets had names ending with .rar, .r00, .r01, .r02, etc.
-         log "[INFO] version 2.0 rar archive detected."
-         
-         # grab and populate the single rar filename for unpacking
-         ARCHIVE_FILE=$(ls *.rar)
-         log "[INFO] found archive file: $ARCHIVE_FILE"
-         
-         # unpack the file!
-         if unpack_file "$ARCHIVE_FILE"
-         then
-             chmod -R a+rw .
-             log "[INFO] everything went a-ok for file $ARCHIVE_FILE"
-         else
-             log "[ERROR] it did not go so well, we hit an error on $ARCHIVE_FILE.."
-             end_script 1 # exit with error
-         fi
-         ;;
-     *)
-         # beginning with RAR version 3.0, a new naming convention was introduced that adds two extensions to the file name
-         # the first indicates the part number, and the second is always ".rar". A typical file posting will have segments with 
-         # names such as file.part01.rar, file.part02.rar, file.part03.rar, etc. 
-         log "[INFO] possible version 3.0 rar achive detected.."
-         
-         # lets do some sanity on this to ensure we really have 1 single archive split across many parts and not
-         # many small files rar files that need unpacking, if we do no worries this script will extract everything! 
-         
-         # first we need to output all rar files the system knows in this directory to a text file, this 
-         # will save an excessive I/O calls to the ls function for each part and helps us to resort the list later
-         for ARCHIVE_FILE in $(ls -X *.rar) #sort alphabetically by entry extension
-         do
-             log "[INFO] found archive file: $ARCHIVE_FILE"
-             
-             # grab the rar volume number by issung a unrar list on the archive file and then chomping the heck out of the response
-             # so we can populate this variable, however since we will be running the unrar against multiple files we need to make sure
-             # we dont collide with another ending torrent that will try to compete to use unrar as this script does, so lets call 
-             # the handy function from before
-             while true # check to make sure UNRAR is NOT running by calling a function to trap the return code
-             do # do while loop here until pid is destroyed
-                 if (( is_unrar_running == 0 )) 
-                 then #if unrar is already running
-                     log "[WARNING] unrar is already running sleeping 15 seconds..."
-                     sleep 15 # 15 seconds, is this enough time? .. probably so
-                 else
-                     log "[INFO] unrar is NOT running, firing info request.."
-                     RAR_VOLUME=$("$UNRAR_EXE" l "$ARCHIVE_FILE" | awk '{y=x "\n" $0; x=$0};END{print y}' | grep -v ^$ | awk '{print $6}')
-                     if [[ "${?}" -ne "0" ]] # check return code to ensure  our command didnt fail us
-                     then # return code exited something other than zero, why?
-                         log "[ERROR] $UNRAR_EXE application failed with $? errorcode"
-                         end_script 1
-                     else
-                         log "[INFO] $UNRAR_EXE application succeeded"
-                         log "[INFO] $ARCHIVE_FILE volume number is: $RAR_VOLUME"
-                         
-                         # the meat and potatos of the script
-                         if [[ "$RAR_VOLUME" -eq "1" ]]
-                         then # process the RAR volume 1
-                             log "[INFO] RAR volume $RAR_VOLUME found in $ARCHIVE_FILE located in path $PATH_TO_FILE"
-                             if unpack_file "$ARCHIVE_FILE"
-                             then
-                                 chmod -R a+rw .
-                                 log "[INFO] everything went a-ok for file $ARCHIVE_FILE"
-                             else
-                                 log "[ERROR] it did not go so well, we hit an error on $ARCHIVE_FILE.."
-                                 end_script 1 # exit with error
-                             fi
-                         fi
-                     fi
-                     break #exit the inner loop
-                 fi
-                 # go around these loops make me really dizzy
-             done    
-         done        
-         ;;
- esac
+        if unrar x -o+ "$f"; then
+           findremove
+           else
+                mail -s "unRAR ERROR" $email <<< "Extract failed within directory: $d"
+        fi
+        cd "$parent"
+done
