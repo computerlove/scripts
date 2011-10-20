@@ -11,7 +11,7 @@ fi
 parent=$1
 path=""
 
-if [! -z $2 ] ; then
+if [ ! -z $2 ] ; then
   path=$2
 fi
 
@@ -39,8 +39,8 @@ do
 
         if unrar x -o+ "$f" "$path"; then
            findremove
-           else
-                mail -s "unRAR ERROR" $email <<< "Extract failed within directory: $d"
+        else
+           mail -s "unRAR ERROR" $email <<< "Extract failed within directory: $d"
         fi
         cd "$parent"
 done
