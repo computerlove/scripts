@@ -1,0 +1,4 @@
+#!/bin/bash
+mv $1 $2 
+/home/marv/scripts/unrarAndMove.sh
+rm -rf $1
