@@ -8,7 +8,7 @@ FILE=${ROOT}"/"${YEAR}"/"${MONTH}"/"${DAY}
 VIDEO=${FILE}"/video.mp4"
 if [ ! -f "${VIDEO}" ];
 then
-   ./timelapsplx.sh ${FILE}
+   /home/hildegunn/scripts/timelaps/timelapsplx.sh ${FILE}
 else 
    echo "${VIDEO} exists"
 fi
