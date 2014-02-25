@@ -19,14 +19,15 @@ serier+=("The.Walking.Dead")
 serier+=("Vikings")
 
 export DISPLAY=:0.0
-echo "Starting"
+
 cd $tempfolder
 for file in `ls` ; do
   lowercasefile=${file,,}
-  echo "Checking ${file}"
-  for serieindex in `seq ${#serier[@]}` ; do
+  
+  for serieindex in ${serier[@]} ; do
     serie=${serier[$serieindex]}
     lowercaseserie=${serie,,}
+    echo "Testing ${lowercasefile} and ${lowercaseserie}"
     if [[ $serie != "" && $lowercasefile = *$lowercaseserie* ]] ; then
       [[ ${file} =~ .*([s|S][[:digit:]]+).* ]]
       SEASON=${BASH_REMATCH[1]^^}
