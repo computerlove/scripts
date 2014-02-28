@@ -19,13 +19,12 @@ serier+=("The.Walking.Dead")
 serier+=("Vikings")
 
 export DISPLAY=:0.0
-
+echo "Starting"
 cd $tempfolder
 for file in `ls` ; do
   lowercasefile=${file,,}
   
-  for serieindex in ${serier[@]} ; do
-    serie=${serier[$serieindex]}
+  for serie in ${serier[@]} ; do
     lowercaseserie=${serie,,}
     echo "Testing ${lowercasefile} and ${lowercaseserie}"
     if [[ $serie != "" && $lowercasefile = *$lowercaseserie* ]] ; then
@@ -52,4 +51,5 @@ for file in `ls` ; do
   done
 done
 
+echo "Done"
 exit
